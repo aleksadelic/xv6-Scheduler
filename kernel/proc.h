@@ -105,6 +105,9 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
+
+  int predicted_time;          // Predicted execution time
+  int burst_time;              // Real execution time
 };
 
 enum SCHEDULING_ALGORITHM {SJF, CFS};

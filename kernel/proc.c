@@ -20,7 +20,9 @@ static void freeproc(struct proc *p);
 
 extern char trampoline[]; // trampoline.S
 
-enum SCHEDULING_ALGORITHM schedulingAlgorithm = SJF;
+enum SCHEDULING_ALGORITHM scheduling_algorithm = SJF;
+
+int a = 1; // The parameter a controls the relative weight of recent and past history in our prediction
 
 // helps ensure that wakeups of wait()ing
 // parents are not lost. helps obey the
@@ -244,6 +246,9 @@ userinit(void)
   safestrcpy(p->name, "initcode", sizeof(p->name));
   p->cwd = namei("/");
 
+  p->predicted_time = 0;
+  p->burst_time = 0;
+
   put(p);
 
   release(&p->lock);
@@ -430,18 +435,23 @@ wait(uint64 addr)
 }
 
 void put(struct proc *p) {
+    p->predicted_time = (p->predicted_time + p->burst_time) >> a;
+    p->burst_time = 0;
     p->state = RUNNABLE;
 }
 
 struct proc* get() {
     struct proc *p;
+    struct proc *min = 0;
     for(p = proc; p < &proc[NPROC]; p++) {
         acquire(&p->lock);
-        if(p->state == RUNNABLE)
-            return p;
+        if(p->state == RUNNABLE) {
+            if(min == 0 || p->predicted_time < min->predicted_time)
+                min = p;
+        }
         release(&p->lock);
     }
-    return 0;
+    return min;
 }
 
 // Per-CPU process scheduler.
@@ -464,6 +474,7 @@ scheduler(void)
 
     p = get();
     if(p == 0) continue;
+    acquire(&p->lock);
     // Switch to chosen process.  It is the process's job
     // to release its lock and then reacquire it
     // before jumping back to us.
@@ -672,7 +683,6 @@ procdump(void)
 int change_scheduling_algorithm(int n) {
     if(n != 0 && n != 1)
         return -1;
-    schedulingAlgorithm = n;
-    printf("SCHEDULING ALGORITHM IS: ***** %d *****\n", n);
+    scheduling_algorithm = n;
     return 0;
 }
