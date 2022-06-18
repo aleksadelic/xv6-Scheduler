@@ -95,3 +95,10 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+uint64 sys_chsched(void) {
+  int n;
+  if(argint(0, &n) < 0)
+    return -1;
+  return change_scheduling_algorithm(n);
+}

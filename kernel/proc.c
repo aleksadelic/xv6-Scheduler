@@ -20,6 +20,8 @@ static void freeproc(struct proc *p);
 
 extern char trampoline[]; // trampoline.S
 
+enum SCHEDULING_ALGORITHM schedulingAlgorithm = SJF;
+
 // helps ensure that wakeups of wait()ing
 // parents are not lost. helps obey the
 // memory model when using p->parent.
@@ -665,4 +667,12 @@ procdump(void)
     printf("%d %s %s", p->pid, state, p->name);
     printf("\n");
   }
+}
+
+int change_scheduling_algorithm(int n) {
+    if(n != 0 && n != 1)
+        return -1;
+    schedulingAlgorithm = n;
+    printf("SCHEDULING ALGORITHM IS: ***** %d *****\n", n);
+    return 0;
 }
