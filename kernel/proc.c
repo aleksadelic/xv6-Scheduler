@@ -10,6 +10,8 @@ struct cpu cpus[NCPU];
 
 struct proc proc[NPROC];
 
+struct proc *head = 0;
+
 struct proc *initproc;
 
 int nextpid = 1;
@@ -249,6 +251,8 @@ userinit(void)
   p->predicted_time = 0;
   p->burst_time = 0;
 
+  p->next = 0;
+
   put(p);
 
   release(&p->lock);
@@ -438,20 +442,29 @@ void put(struct proc *p) {
     p->predicted_time = (p->predicted_time + p->burst_time) >> a;
     p->burst_time = 0;
     p->state = RUNNABLE;
+    if(head == 0) {
+        head = p;
+        return;
+    }
+    struct proc *curr = head, *prev = 0;
+    while(curr != 0 && p->predicted_time >= curr->predicted_time) {
+        prev = curr;
+        curr = curr->next;
+    }
+    if(prev == 0) {
+        p->next = head;
+        head = p;
+    } else {
+        prev->next = p;
+        p->next = curr;
+    }
 }
 
 struct proc* get() {
-    struct proc *p;
-    struct proc *min = 0;
-    for(p = proc; p < &proc[NPROC]; p++) {
-        acquire(&p->lock);
-        if(p->state == RUNNABLE) {
-            if(min == 0 || p->predicted_time < min->predicted_time)
-                min = p;
-        }
-        release(&p->lock);
-    }
-    return min;
+    struct proc *p = head;
+    if(head != 0) head = head->next;
+    if(p != 0) p->next = 0;
+    return p;
 }
 
 // Per-CPU process scheduler.

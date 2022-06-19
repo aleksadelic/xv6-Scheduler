@@ -108,6 +108,8 @@ struct proc {
 
   int predicted_time;          // Predicted execution time
   int burst_time;              // Real execution time
+
+  struct proc *next;           // Pointer to the next process in the list
 };
 
 enum SCHEDULING_ALGORITHM {SJF, CFS};
