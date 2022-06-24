@@ -107,6 +107,7 @@ void            procdump(void);
 void            put(struct proc*);
 struct proc*    get();
 int             change_scheduling_algorithm(int);
+void            update_times_in_queue();
 
 // swtch.S
 void            swtch(struct context*, struct context*);

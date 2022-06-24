@@ -22,7 +22,7 @@ static void freeproc(struct proc *p);
 
 extern char trampoline[]; // trampoline.S
 
-enum SCHEDULING_ALGORITHM scheduling_algorithm = nSJF;
+enum SCHEDULING_ALGORITHM scheduling_algorithm = CFS;
 
 int a = 1; // The parameter a controls the relative weight of recent and past history in our prediction
 
@@ -174,6 +174,8 @@ freeproc(struct proc *p)
   p->burst_time = 0;
   p->remaining_time = 0;
   p->preempted = 0;
+  p->time_in_queue = 0;
+  p->quantum = 0;
 }
 
 // Create a user page table for a given process,
@@ -256,6 +258,8 @@ userinit(void)
   p->burst_time = 0;
   p->remaining_time = 0;
   p->preempted = 0;
+  p->time_in_queue = 0;
+  p->quantum = 0;
 
   p->next = 0;
 
@@ -449,19 +453,30 @@ void put(struct proc *p) {
         p->predicted_time = (p->predicted_time + p->burst_time) >> a;
         p->burst_time = 0;
         p->remaining_time = p->predicted_time;
+
+        p->time_in_queue = 0;
     }
     else {
         p->preempted = 0;
     }
+    p->quantum = p->time_in_queue / NPROC;
     p->state = RUNNABLE;
     if(head == 0) {
         head = p;
         return;
     }
+
     struct proc *curr = head, *prev = 0;
-    while(curr != 0 && p->remaining_time >= curr->remaining_time) {
-        prev = curr;
-        curr = curr->next;
+    if(scheduling_algorithm == nSJF || scheduling_algorithm == SJF) {
+        while (curr != 0 && p->remaining_time >= curr->remaining_time) {
+            prev = curr;
+            curr = curr->next;
+        }
+    } else {
+        while(curr != 0 && p->burst_time >= curr->burst_time) {
+            prev = curr;
+            curr = curr->next;
+        }
     }
     if(prev == 0) {
         p->next = head;
@@ -475,7 +490,8 @@ void put(struct proc *p) {
 struct proc* get() {
     struct proc *p = head;
     if(head != 0) head = head->next;
-    if(p != 0) p->next = 0;
+    if(p != 0)
+        p->next = 0;
     return p;
 }
 
@@ -710,4 +726,11 @@ int change_scheduling_algorithm(int n) {
         return -1;
     scheduling_algorithm = n;
     return 0;
+}
+
+void update_times_in_queue() {
+    struct proc *p;
+    for(p = head; p != 0; p = p->next) {
+        p->time_in_queue++;
+    }
 }

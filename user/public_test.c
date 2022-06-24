@@ -68,7 +68,7 @@ main(int argc, char *argv[])
 
     printf("proc_num=%d length=%d\n", proc_num, length);
 
-    chsched(1);
+    //chsched(1);
     for (int i = 0; i < proc_num; i++) {
         int pid = fork();
         if(pid < 0)
@@ -82,11 +82,11 @@ main(int argc, char *argv[])
             exit(0);
         }
     }
-    chsched(0);
+    //chsched(2);
     for (int i = 0; i < proc_num; i++) {
         wait(0);
     }
-    chsched(1);
+    //chsched(0);
     exit(0);
 }
 

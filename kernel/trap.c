@@ -81,11 +81,16 @@ usertrap(void)
 
   // give up the CPU if this is a timer interrupt.
   if(which_dev == 2) {
+      update_times_in_queue();
       if(myproc() != 0) {
           myproc()->burst_time++;
           myproc()->remaining_time--;
+          myproc()->quantum--;
       }
-      if(scheduling_algorithm != nSJF && myproc() != 0 && head != 0 && myproc()->remaining_time > head->remaining_time) {
+      if(scheduling_algorithm == SJF && myproc() != 0 && head != 0 && myproc()->remaining_time > head->remaining_time) {
+          myproc()->preempted = 1;
+          yield();
+      } else if(scheduling_algorithm == CFS && myproc() != 0 && ((head != 0 && myproc()->burst_time > head->burst_time) || myproc()->quantum == 0)) {
           myproc()->preempted = 1;
           yield();
       }
@@ -163,9 +168,14 @@ kerneltrap()
 
   // give up the CPU if this is a timer interrupt.
   if(which_dev == 2 && myproc() != 0 && myproc()->state == RUNNING) {
+      update_times_in_queue();
       myproc()->burst_time++;
       myproc()->remaining_time--;
-      if(scheduling_algorithm != nSJF && head != 0 && myproc()->remaining_time > head->remaining_time) {
+      myproc()->quantum--;
+      if(scheduling_algorithm == SJF && head != 0 && myproc()->remaining_time > head->remaining_time) {
+          myproc()->preempted = 1;
+          yield();
+      } else if(scheduling_algorithm == CFS && ((head != 0 && myproc()->burst_time > head->burst_time) || myproc()->quantum == 0)) {
           myproc()->preempted = 1;
           yield();
       }

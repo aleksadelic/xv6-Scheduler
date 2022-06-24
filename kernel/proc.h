@@ -111,6 +111,8 @@ struct proc {
   int remaining_time;          // Remaining time for execution
   int preempted;               // If preemption happened
 
+  int time_in_queue;           // Time process has spent waiting in queue
+  int quantum;
   struct proc *next;           // Pointer to the next process in the list
 };
 
