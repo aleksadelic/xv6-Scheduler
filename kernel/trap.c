@@ -11,6 +11,9 @@ uint ticks;
 
 extern char trampoline[], uservec[], userret[];
 
+extern enum SCHEDULING_ALGORITHM scheduling_algorithm;
+extern struct proc *head;
+
 // in kernelvec.S, calls kerneltrap().
 void kernelvec();
 
@@ -78,10 +81,16 @@ usertrap(void)
 
   // give up the CPU if this is a timer interrupt.
   if(which_dev == 2) {
-      if(myproc() != 0) myproc()->burst_time++;
-      //yield();
+      if(myproc() != 0) {
+          myproc()->burst_time++;
+          myproc()->remaining_time--;
+      }
+      if(scheduling_algorithm != nSJF && myproc() != 0 && head != 0 && myproc()->remaining_time > head->remaining_time) {
+          myproc()->preempted = 1;
+          yield();
+      }
   }
-  // Does not give up the CPU because SJF is Non-Preemptive
+  // Does not give up the CPU if SJF is Non-Preemptive
 
   usertrapret();
 }
@@ -155,10 +164,14 @@ kerneltrap()
   // give up the CPU if this is a timer interrupt.
   if(which_dev == 2 && myproc() != 0 && myproc()->state == RUNNING) {
       myproc()->burst_time++;
-      //yield();
+      myproc()->remaining_time--;
+      if(scheduling_algorithm != nSJF && head != 0 && myproc()->remaining_time > head->remaining_time) {
+          myproc()->preempted = 1;
+          yield();
+      }
   }
 
-  // Does not give up the CPU because SJF is Non-Preemptive
+  // Does not give up the CPU if SJF is Non-Preemptive
 
   // the yield() may have caused some traps to occur,
   // so restore trap registers for use by kernelvec.S's sepc instruction.

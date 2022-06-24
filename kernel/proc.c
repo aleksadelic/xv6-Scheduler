@@ -22,7 +22,7 @@ static void freeproc(struct proc *p);
 
 extern char trampoline[]; // trampoline.S
 
-enum SCHEDULING_ALGORITHM scheduling_algorithm = SJF;
+enum SCHEDULING_ALGORITHM scheduling_algorithm = nSJF;
 
 int a = 1; // The parameter a controls the relative weight of recent and past history in our prediction
 
@@ -170,6 +170,10 @@ freeproc(struct proc *p)
   p->killed = 0;
   p->xstate = 0;
   p->state = UNUSED;
+  p->predicted_time = 0;
+  p->burst_time = 0;
+  p->remaining_time = 0;
+  p->preempted = 0;
 }
 
 // Create a user page table for a given process,
@@ -250,6 +254,8 @@ userinit(void)
 
   p->predicted_time = 0;
   p->burst_time = 0;
+  p->remaining_time = 0;
+  p->preempted = 0;
 
   p->next = 0;
 
@@ -439,15 +445,21 @@ wait(uint64 addr)
 }
 
 void put(struct proc *p) {
-    p->predicted_time = (p->predicted_time + p->burst_time) >> a;
-    p->burst_time = 0;
+    if(p->preempted == 0) {
+        p->predicted_time = (p->predicted_time + p->burst_time) >> a;
+        p->burst_time = 0;
+        p->remaining_time = p->predicted_time;
+    }
+    else {
+        p->preempted = 0;
+    }
     p->state = RUNNABLE;
     if(head == 0) {
         head = p;
         return;
     }
     struct proc *curr = head, *prev = 0;
-    while(curr != 0 && p->predicted_time >= curr->predicted_time) {
+    while(curr != 0 && p->remaining_time >= curr->remaining_time) {
         prev = curr;
         curr = curr->next;
     }
@@ -694,7 +706,7 @@ procdump(void)
 }
 
 int change_scheduling_algorithm(int n) {
-    if(n != 0 && n != 1)
+    if(n < 0 || n > 2)
         return -1;
     scheduling_algorithm = n;
     return 0;
