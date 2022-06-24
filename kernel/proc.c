@@ -22,7 +22,7 @@ static void freeproc(struct proc *p);
 
 extern char trampoline[]; // trampoline.S
 
-enum SCHEDULING_ALGORITHM scheduling_algorithm = CFS;
+enum SCHEDULING_ALGORITHM scheduling_algorithm = nSJF;
 
 int a = 1; // The parameter a controls the relative weight of recent and past history in our prediction
 
@@ -724,8 +724,46 @@ procdump(void)
 int change_scheduling_algorithm(int n) {
     if(n < 0 || n > 2)
         return -1;
+    if(scheduling_algorithm == n)
+        return 0;
+    if(scheduling_algorithm < 2 && n == 2) {
+        update_queue(n);
+    }
+    if(scheduling_algorithm == 2 && n < 2) {
+        update_queue(n);
+    }
     scheduling_algorithm = n;
     return 0;
+}
+
+void update_queue(int new_scheduling_algorithm) {
+    if(new_scheduling_algorithm != CFS) {
+        for(struct proc *p = head, *pprev = 0; p != 0; pprev = p, p = p->next) {
+            for(struct proc *q = p->next, *qprev = p; q != 0; qprev = q, q = q->next) {
+                if(p->remaining_time > q->remaining_time) {
+                    struct proc *temp = p->next;
+                    if(pprev) pprev->next = q;
+                    else head = q;
+                    qprev->next = p;
+                    p->next = q->next;
+                    q->next = temp;
+                }
+            }
+        }
+    } else {
+        for(struct proc *p = head, *pprev = 0; p != 0; pprev = p, p = p->next) {
+            for(struct proc *q = p->next, *qprev = p; q != 0; qprev = q, q = q->next) {
+                if(p->burst_time > q->burst_time) {
+                    struct proc *temp = p->next;
+                    if(pprev) pprev->next = q;
+                    else head = q;
+                    qprev->next = p;
+                    p->next = q->next;
+                    q->next = temp;
+                }
+            }
+        }
+    }
 }
 
 void update_times_in_queue() {
