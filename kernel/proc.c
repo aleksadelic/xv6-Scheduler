@@ -26,6 +26,8 @@ enum SCHEDULING_ALGORITHM scheduling_algorithm = nSJF;
 
 int a = 1; // The parameter a controls the relative weight of recent and past history in our prediction
 
+struct spinlock sched_lock; // mutex for scheduler operations
+
 // helps ensure that wakeups of wait()ing
 // parents are not lost. helps obey the
 // memory model when using p->parent.
@@ -56,6 +58,7 @@ procinit(void)
   
   initlock(&pid_lock, "nextpid");
   initlock(&wait_lock, "wait_lock");
+  initlock(&sched_lock, "sched_lock");
   for(p = proc; p < &proc[NPROC]; p++) {
       initlock(&p->lock, "proc");
       p->kstack = KSTACK((int) (p - proc));
@@ -449,6 +452,7 @@ wait(uint64 addr)
 }
 
 void put(struct proc *p) {
+    acquire(&sched_lock);
     if(p->preempted == 0) {
         p->predicted_time = (p->predicted_time + p->burst_time) >> a;
         p->burst_time = 0;
@@ -463,6 +467,7 @@ void put(struct proc *p) {
     p->state = RUNNABLE;
     if(head == 0) {
         head = p;
+        release(&sched_lock);
         return;
     }
 
@@ -485,13 +490,19 @@ void put(struct proc *p) {
         prev->next = p;
         p->next = curr;
     }
+    release(&sched_lock);
 }
 
 struct proc* get() {
+    acquire(&sched_lock);
     struct proc *p = head;
-    if(head != 0) head = head->next;
-    if(p != 0)
-        p->next = 0;
+    if(p == 0) {
+        release(&sched_lock);
+        return 0;
+    }
+    head = head->next;
+    p->next = 0;
+    release(&sched_lock);
     return p;
 }
 
