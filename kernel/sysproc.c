@@ -97,8 +97,8 @@ sys_uptime(void)
 }
 
 uint64 sys_chsched(void) {
-  int n;
-  if(argint(0, &n) < 0)
+  int n, a;
+  if(argint(0, &n) < 0 || argint(1, &a) < 0)
     return -1;
-  return change_scheduling_algorithm(n);
+  return change_scheduling_algorithm(n, a);
 }

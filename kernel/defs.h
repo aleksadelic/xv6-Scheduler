@@ -106,7 +106,7 @@ int             either_copyin(void *dst, int user_src, uint64 src, uint64 len);
 void            procdump(void);
 void            put(struct proc*);
 struct proc*    get();
-int             change_scheduling_algorithm(int);
+int             change_scheduling_algorithm(int new_scheduling_algorithm, int new_a);
 void            update_times_in_queue();
 void            update_queue(int new_scheduling_algorithm);
 

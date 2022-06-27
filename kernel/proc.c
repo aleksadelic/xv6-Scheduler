@@ -24,7 +24,7 @@ extern char trampoline[]; // trampoline.S
 
 enum SCHEDULING_ALGORITHM scheduling_algorithm = nSJF;
 
-int a = 1; // The parameter a controls the relative weight of recent and past history in our prediction
+int a = 50; // The parameter a controls the relative weight of recent and past history in our prediction
 
 struct spinlock sched_lock; // mutex for scheduler operations
 
@@ -454,7 +454,7 @@ wait(uint64 addr)
 void put(struct proc *p) {
     acquire(&sched_lock);
     if(p->preempted == 0) {
-        p->predicted_time = (p->predicted_time + p->burst_time) >> a;
+        p->predicted_time = ((100 - a) * p->predicted_time + a * p->burst_time) / 100;
         p->burst_time = 0;
         p->remaining_time = p->predicted_time;
 
@@ -732,9 +732,12 @@ procdump(void)
   }
 }
 
-int change_scheduling_algorithm(int n) {
+int change_scheduling_algorithm(int n, int a_new) {
     if(n < 0 || n > 2)
         return -1;
+    if(a >= 0 && a <= 100 && n >= 0 && n <= 1)
+        a = a_new;
+
     if(scheduling_algorithm == n)
         return 0;
     if(scheduling_algorithm < 2 && n == 2) {
